@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""rdanalyzer is a tool to analyze and query results of rdfind dry run.
+
+Usage:
+  rdanalyzer space (to-save|after-removal|total) [--input=<file>]
+  rdanalyzer duplicates (count|list) <file-path> [--columns] [--input=<file>]
+  rdanalyzer directories [--mindup=<min>] [--input=<file>]
+  rdanalyzer scope <subtree-path> [--input=<file>]
+  rdanalyzer show tree [--input=<file>]
+
+Options:
+  -h --help       Show this screen.
+  --version       Show version.
+  --input=<file>  Specifies the file to read from [default: results.txt].
+  --columns       Show all columns values of entries (same as rdfind format).
+  --mindup=<min>  Specifies the minimum number of duplicated files shared by the folders to be added to results [default: 2].
+"""
+
+from docopt import docopt
+from rdfind_analyzer import rdfind_analyzer
+
+def get_report_file(arguments):
+    report_file = 'results.txt'
+    if arguments['--input']:
+        report_file = arguments['--input']
+    return report_file
+
+def get_report(arguments):
+    report_file = get_report_file(arguments)
+    return rdfind_analyzer.create_report_from_file(report_file)
+
+def space(arguments):
+    if arguments["to-save"]:
+        print("%d bytes" % report.size_to_save)
+    elif arguments["after-removal"]:
+        print("%d bytes" % report.size_after_duplicated_removal)
+    elif arguments["total"]:
+        print("%d bytes" % report.size)
+
+def duplicates(arguments):
+    entry_name = arguments['<file-path>']
+    try:
+        group = report.find_group_for_entry_named(entry_name)
+        if arguments['list']:
+            for entry in group:
+                if not entry.name == entry_name:
+                    if arguments["--columns"]:
+                        print(entry.rdfind_str())
+                    else:
+                        print(entry.name)
+        elif arguments['count']:
+            print("%d duplicates" % len(group))
+    except rdfind_analyzer.Error as e:
+        print(e)
+
+if __name__ == '__main__':
+    arguments = docopt(__doc__, version='rdanalyzer 0.1')
+    print(arguments)
+
+    report = get_report(arguments)
+    if arguments["space"]:
+        space(arguments)
+    elif arguments["duplicates"]:
+        duplicates(arguments)
